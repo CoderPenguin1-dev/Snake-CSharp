@@ -1,22 +1,17 @@
-﻿class Program
+﻿using System.Xml.Serialization;
+
+class Program
 {
-    static readonly Random rng = new();
     const char snakeSegment = '#';
 
     static void AppleChecker(ref int length, ref int[] foodPos, int x, int y)
     {
+        Random rng = new();
         if (x == foodPos[0] && y == foodPos[1])
         {
             length++;
             foodPos[0] = rng.Next(1, 34); foodPos[1] = rng.Next(1, 11);
         }
-    }
-
-    static void DrawApple(int[] foodPos)
-    {
-        Console.SetCursorPosition(foodPos[0], foodPos[1]);
-        Console.ForegroundColor = ConsoleColor.DarkRed;
-        Console.Write("*");
     }
 
 /*
@@ -56,7 +51,6 @@
                     // Clear pause message if paused.
                     if (paused)
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkGreen;
                         Console.SetCursorPosition(6, 5);
                         Console.WriteLine("                       ");
                         Console.SetCursorPosition(7, 6);
@@ -117,8 +111,9 @@
             #endregion
 
             Console.Clear();
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine("===== Snake =====\n");
+            Console.WriteLine("====== Snake ======");
+            Console.WriteLine($"Previous Score: {previousLength:D3}");
+            Console.WriteLine("===================\n");
             Console.WriteLine("[1] Play Game");
             Console.WriteLine("[2] High Scores");
             Console.WriteLine("[3] Quit Game");
@@ -153,6 +148,67 @@
         }
     }
 
+    static void Draw(List<int[]> posList, int[] foodPos, int length)
+    {
+        bool appleDrawn = false;
+        Console.SetCursorPosition(0, 0);
+
+        // Border Top & Score
+        string display = "";
+        for (int i = 0; i < 35; i++)
+        {
+            if (i == 13)
+            {
+                display += $"Score:{length:D3}";
+                i += 8;
+                continue;
+            }
+            display += "█";
+        }
+        display += "\n";
+
+        // Border Sides & Game
+        for (int y = 0; y < 11; y++)
+        {
+            display += "█";
+            for (int x = 0; x < 33; x++)
+            {
+                int[] currentPos = { x + 1, y + 1 };
+                bool segmentDrawn = false;
+                if (posList.Any(p => p.SequenceEqual(currentPos)))
+                {
+                    // Draw head of snake.
+                    if (posList[^1][0] == currentPos[0] && posList[^1][1] == currentPos[1])
+                    {
+                        segmentDrawn = true;
+                        display += "@";
+                    }
+                    // Draw apple over snake segment.
+                    if (foodPos[0] == currentPos[0] && foodPos[1] == currentPos[1])
+                    {
+                        appleDrawn = true;
+                        display += "*";
+                    }
+                    else if (!segmentDrawn) display += "#";
+                }
+                // Draw apple if it wasn't already drawn.
+                else if (foodPos[0] == currentPos[0] && foodPos[1] == currentPos[1] && !appleDrawn)
+                    display += "*";
+                else display += " ";
+            }
+
+            display += "█";
+            display += "\n";
+        }
+
+        // Border Bottom
+        for (int i = 0; i < 35; i++)
+        {
+            display += "█";
+        }
+        Console.WriteLine(display);
+    }
+
     static int Game()
     {
         Console.Clear();
@@ -161,35 +217,10 @@
         int direction = 1;
         int length = 0;
         List<int[]> posList = new() { new int[2] { x, y } }; 
-        int gameRunning = 1;
+        int gameRunning = 1; // -1 = Quit From Paused Menu, 0 = Game Over, 1 = Game Running
         int gameSpeed = 150;
         bool paused = false;
         int[] foodPos = new int[2] { 5, 5 };
-
-        #region Draw Border
-        Console.ForegroundColor = ConsoleColor.DarkGray;
-        for (int i = 0; i < 35; i++)
-        {
-            Console.SetCursorPosition(i, 0);
-            Console.Write("█");
-        }
-        for (int i = 0; i < 35; i++)
-        {
-            Console.SetCursorPosition(i, 11);
-            Console.Write("█");
-        }
-        for (int i = 1; i < 11; i++)
-        {
-            Console.SetCursorPosition(0, i);
-            Console.Write("█");
-        }
-        for (int i = 1; i < 11; i++)
-        {
-            Console.SetCursorPosition(34, i);
-            Console.Write("█");
-        }
-        Console.ForegroundColor = ConsoleColor.DarkGreen;
-        #endregion
 
         while (gameRunning == 1)
         {
@@ -201,6 +232,7 @@
 
             if (!paused) // Game Loop
             {
+
                 // Direction Handler
                 switch (direction)
                 {
@@ -219,70 +251,54 @@
                 }
 
                 AppleChecker(ref length, ref foodPos, x, y);
-                Console.SetCursorPosition(x, y); Console.Write(snakeSegment); // Draw Snake Segment
-                DrawApple(foodPos);
-
-                // Redraw Right Border To Fix Removal Bug (please C# let me do stuff without having to hack you up with a hacksaw every 5 seconds..)
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                for (int i = 1; i < 11; i++)
-                {
-                    Console.SetCursorPosition(34, i);
-                    Console.Write("█");
-                }
-                // Draw in score and set color for snake.
-                Console.SetCursorPosition(13, 0);
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine($"Score:{length:D3}");
 
                 // Collision Check w/ Walls
-                if (x == 34 || x == 0) gameRunning = 0;
-                if (y == 11 || y == 0) gameRunning = 0;
+                if (x == 34 || x == 0)
+                {
+                    gameRunning = 0;
+                    continue;
+                }
+                if (y == 12 || y == 0)
+                {
+                    gameRunning = 0;
+                    continue;
+                }
 
                 if (posList.Count > length)
-                {
-                    Console.SetCursorPosition(posList[0][0], posList[0][1]);
-                    Console.Write(" ");
                     posList.RemoveAt(0);
-                }
-
-                // Done to prevent the snake from literally deleting itself visually.
-                foreach (int[] pos in posList)
-                {
-                    Console.SetCursorPosition(pos[0], pos[1]);
-                    Console.Write("#");
-                }
 
                 // Collision Check w/ Self
                 foreach (int[] pos in posList)
-                    if (pos[0] == x && pos[1] == y) gameRunning = 0;
+                    if (pos[0] == x && pos[1] == y)
+                    {
+                        gameRunning = 0;
+                        continue;
+                    }
 
                 posList.Add(new int[2] { x, y });
+                Draw(posList, foodPos, length);
             }
             else // Pause Menu
             {
                 Console.SetCursorPosition(6, 5);
-                Console.ForegroundColor = ConsoleColor.DarkRed;
                 Console.WriteLine("Paused. Esc to unpause.");
                 Console.SetCursorPosition(7, 6);
                 Console.WriteLine("M to goto main menu.");
             }
         }
 
-        #region Game Over Message
+        // Game Over Message
         if (gameRunning == 0)
         {
             Console.SetCursorPosition(12, 5);
-            Console.ForegroundColor = ConsoleColor.DarkRed;
             Console.WriteLine("Game Over!");
             Thread.Sleep(1000);
             // Just clear the buffer real quick to prevent the "Press any key." message from being skipped early.
             while (Console.KeyAvailable) Console.ReadKey(true);
             Console.SetCursorPosition(10, 6);
             Console.WriteLine("Press any key.");
+            Console.ReadKey(true);
         }
-        #endregion
-        Console.ReadKey(true);
-        if (gameRunning == 0) return length;
-        else return 0;
+        return length;
     }
 }
