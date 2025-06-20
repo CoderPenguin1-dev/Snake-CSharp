@@ -270,6 +270,7 @@ class Program
                     posList.RemoveAt(0);
 
                 // Collision Check w/ Walls
+                // Contine statements there to prevent the snake from clipping into the wall.
                 if (x == 34 || x == 0)
                 {
                     gameRunning = 0;
@@ -285,10 +286,7 @@ class Program
                 // Collision Check w/ Self
                 foreach (int[] pos in posList)
                     if (pos[0] == x && pos[1] == y)
-                    {
                         gameRunning = 0;
-                        continue;
-                    }
 
                 posList.Add(new int[2] { x, y });
                 Draw(posList, foodPos, length);
