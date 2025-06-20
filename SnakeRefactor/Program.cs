@@ -10,10 +10,10 @@ class Program
         if (x == foodPos[0] && y == foodPos[1])
         {
             length++;
+            bool validPosFound = false;
             // 816 due to screensize (34x12) multiplied by two for redundancy.
             for (int i = 0; i < 816; i++)
             {
-                bool validPosFound = false;
                 foodPos[0] = rng.Next(1, 34); foodPos[1] = rng.Next(1, 11);
                 foreach (int[] pos in posList)
                 {
@@ -23,8 +23,8 @@ class Program
                     validPosFound = true;
                 }
                 if (validPosFound) break;
-                else gameRunning = 0;
             }
+            if (!validPosFound) gameRunning = 0;
         }
     }
 
