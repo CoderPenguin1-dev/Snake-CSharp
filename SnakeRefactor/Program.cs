@@ -4,13 +4,27 @@ class Program
 {
     const char snakeSegment = '#';
 
-    static void AppleChecker(ref int length, ref int[] foodPos, int x, int y)
+    static void AppleChecker(ref int length, ref int[] foodPos, ref int gameRunning, int x, int y, List<int[]> posList)
     {
         Random rng = new();
         if (x == foodPos[0] && y == foodPos[1])
         {
             length++;
-            foodPos[0] = rng.Next(1, 34); foodPos[1] = rng.Next(1, 11);
+            // 816 due to screensize (34x12) multiplied by two for redundancy.
+            for (int i = 0; i < 816; i++)
+            {
+                bool validPosFound = false;
+                foodPos[0] = rng.Next(1, 34); foodPos[1] = rng.Next(1, 11);
+                foreach (int[] pos in posList)
+                {
+                    validPosFound = false;
+                    if (pos[0] == foodPos[0] && pos[1] == foodPos[1])
+                        break;
+                    validPosFound = true;
+                }
+                if (validPosFound) break;
+                else gameRunning = 0;
+            }
         }
     }
 
@@ -250,7 +264,10 @@ class Program
                         break;
                 }
 
-                AppleChecker(ref length, ref foodPos, x, y);
+                AppleChecker(ref length, ref foodPos, ref gameRunning, x, y, posList);
+
+                if (posList.Count > length)
+                    posList.RemoveAt(0);
 
                 // Collision Check w/ Walls
                 if (x == 34 || x == 0)
@@ -264,8 +281,6 @@ class Program
                     continue;
                 }
 
-                if (posList.Count > length)
-                    posList.RemoveAt(0);
 
                 // Collision Check w/ Self
                 foreach (int[] pos in posList)
