@@ -113,8 +113,8 @@ class Program
             {
                 currentPos[0] = rng.Next(1, 34); currentPos[1] = rng.Next(1, 11);
 
-                // We don't want it landing in the same place *or* in the player. Ignore the new placement if either apply.s
-                if (currentPos.SequenceEqual(new int[] { orgX, orgY })) // Same Place
+                // We don't want it landing in the same place *or* in the player. Ignore the new placement if either apply.
+                if (currentPos[0] == orgX && currentPos[1] == orgY) // Same Place
                     continue;
                 if (segmentPositions.Any(p => p.SequenceEqual(currentPos))) // Player
                     continue;
