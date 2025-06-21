@@ -5,10 +5,13 @@ class Program
     const int SNAKE_COLOR = 82;
     const int BORDER_COLOR = 255;
     const int APPLE_COLOR = 196;
+    const int MESSAGE_COLOR = 196;
+    const int BACKGROUND_COLOR = 0;
+    const int TEXT_COLOR = 255;
 
     public static void Main(string[] args)
     {
-        #region Color Stuffs For Windows
+        #region Color Stuff For Windows
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             [DllImport("kernel32.dll", SetLastError = true)]
@@ -23,14 +26,13 @@ class Program
             SetConsoleMode(handle, mode | 0x4);
         }
         #endregion
-        Console.Title = "Snake"; Console.CursorVisible = false; // Setup the window.
-        int previousLength = 0;
-        Console.Write("\x1b[48;5;0m\x1b[38;5;255");
+        Console.Title = "Snake"; Console.CursorVisible = false;
+        int previousSnakeSegments = 0;
 
         while (true)
         {
             #region New High Score Check
-            if (previousLength > 0)
+            if (previousSnakeSegments > 0)
             {
                 bool firstScore = false;
                 Console.Clear(); Console.ForegroundColor = ConsoleColor.Gray;
@@ -44,14 +46,14 @@ class Program
                 // Check to see if the scores file was already there.
                 if (firstScore) score = 0;
                 else score = int.Parse(scores[0].Split(';')[1]);
-                if (previousLength > score)
+                if (previousSnakeSegments > score)
                 {
                     Console.WriteLine("New High Score!");
                     Console.Write("Please write your name: ");
                     string name = Console.ReadLine();
 
                     // Put new high score on top.
-                    File.WriteAllText("scores.dat", $"{name};{previousLength}");
+                    File.WriteAllText("scores.dat", $"{name};{previousSnakeSegments}");
                     foreach (string s in scores)
                         File.AppendAllText("scores.dat", "\n" + s);
                 }
@@ -59,8 +61,9 @@ class Program
             #endregion
 
             Console.Clear();
+            Console.Write($"\x1b[48;5;{BACKGROUND_COLOR}m\x1b[38;5;{TEXT_COLOR}m");
             Console.WriteLine("====== Snake ======");
-            Console.WriteLine($"Previous Score: {previousLength:D3}");
+            Console.WriteLine($"Previous Score: {previousSnakeSegments:D3}");
             Console.WriteLine("===================");
             Console.WriteLine("[1] Play Game");
             Console.WriteLine("[2] High Scores");
@@ -70,7 +73,7 @@ class Program
                 ConsoleKey key = Console.ReadKey(true).Key;
                 if (key == ConsoleKey.D1)
                 {
-                    previousLength = GameLoop();
+                    previousSnakeSegments = GameLoop();
                     break;
                 }
                 if (key == ConsoleKey.D2)
@@ -96,14 +99,14 @@ class Program
         }
     }
 
-    static void AppleSpawnerChecker(ref int length, ref int[] foodPos, ref int gameRunning, int x, int y, List<int[]> posList)
+    static void AppleSpawnerChecker(ref int segments, ref int[] foodPosition, ref int gameRunning, int headX, int headY, List<int[]> segmentPositions)
     {
         Random rng = new();
-        if (x == foodPos[0] && y == foodPos[1])
+        if (headX == foodPosition[0] && headY == foodPosition[1])
         {
-            length++;
-            int orgX = foodPos[0], orgY = foodPos[1];
-            int[] currentPos = foodPos;
+            segments++;
+            int orgX = foodPosition[0], orgY = foodPosition[1];
+            int[] currentPos = foodPosition;
             bool validPosFound = false;
             // 816 due to screensize (34x12) multiplied by two for redundancy.
             for (int i = 0; i < 816; i++)
@@ -113,19 +116,19 @@ class Program
                 // We don't want it landing in the same place *or* in the player. Ignore the new placement if either apply.s
                 if (currentPos.SequenceEqual(new int[] { orgX, orgY })) // Same Place
                     continue;
-                if (posList.Any(p => p.SequenceEqual(currentPos))) // Player
+                if (segmentPositions.Any(p => p.SequenceEqual(currentPos))) // Player
                     continue;
 
                 validPosFound = true;
                 break;
             }
-            if (validPosFound) foodPos = currentPos;
+            if (validPosFound) foodPosition = currentPos;
             else gameRunning = 0;
         }
     }
 
     // 0 = North, 1 = East, 2 = South, 3 = West
-    static void InputHandler(ref int gameRunning, ref bool paused, ref int direction)
+    static void InputHandler(ref int gameRunning, ref bool gamePaused, ref int direction)
     {
         if (Console.KeyAvailable)
         {
@@ -133,33 +136,33 @@ class Program
             switch (key.Key)
             {
                 case ConsoleKey.UpArrow or ConsoleKey.W:
-                    if (direction != 2 && !paused) direction = 0;
+                    if (direction != 2 && !gamePaused) direction = 0;
                     break;
 
                 case ConsoleKey.DownArrow or ConsoleKey.S:
-                    if (direction != 0 && !paused) direction = 2;
+                    if (direction != 0 && !gamePaused) direction = 2;
                     break;
 
                 case ConsoleKey.LeftArrow or ConsoleKey.A:
-                    if (direction != 1 && !paused) direction = 3;
+                    if (direction != 1 && !gamePaused) direction = 3;
                     break;
 
                 case ConsoleKey.RightArrow or ConsoleKey.D:
-                    if (direction != 3 && !paused) direction = 1;
+                    if (direction != 3 && !gamePaused) direction = 1;
                     break;
 
                 case ConsoleKey.Escape:
-                    paused = !paused;
+                    gamePaused = !gamePaused;
                     break;
 
                 case ConsoleKey.M:
-                    if (paused) gameRunning = -1;
+                    if (gamePaused) gameRunning = -1;
                     break;
             }
         }
     }
 
-    static void DrawGame(List<int[]> posList, int[] foodPos, int length)
+    static void DrawGame(List<int[]> segmentPositions, int[] foodPosition, int segments)
     {
         Console.SetCursorPosition(0, 0);
 
@@ -169,7 +172,7 @@ class Program
         {
             if (i == 13)
             {
-                display += $"Score:{length - 1:D3}";
+                display += $"Score:{segments - 1:D3}";
                 i += 8;
                 continue;
             }
@@ -184,17 +187,17 @@ class Program
             for (int x = 0; x < 33; x++)
             {
                 int[] currentPos = { x + 1, y + 1 };
-                if (posList.Any(p => p.SequenceEqual(currentPos)))
+                if (segmentPositions.Any(p => p.SequenceEqual(currentPos)))
                 {
                     display += $"\x1b[38;5;{SNAKE_COLOR}m";
                     // Draw head of snake.
-                    if (posList[^1][0] == currentPos[0] && posList[^1][1] == currentPos[1])
+                    if (segmentPositions[^1][0] == currentPos[0] && segmentPositions[^1][1] == currentPos[1])
                         display += "@";
                     // If not the head, draw the body.
                     else display += "#";
                 }
                 // Draw apple.
-                else if (foodPos[0] == currentPos[0] && foodPos[1] == currentPos[1])
+                else if (foodPosition[0] == currentPos[0] && foodPosition[1] == currentPos[1])
                 {
                     display += $"\x1b[38;5;{APPLE_COLOR}m";
                     display += "*";
@@ -223,23 +226,26 @@ class Program
 
         int headX = 1, headY = 1;
         int direction = 1;
-        int length = 1;
-        List<int[]> posList = new() { new int[2] { headX, headY } }; 
+        int snakeSegments = 1;
+        List<int[]> segmentPositions = new() { new int[2] { headX, headY } }; 
+        // Used to change the end of the tail when the snake dies.
+        // If not for this, the end of the tail would never be changed as it's not in the position list by the time the death checks are done.
+        int[] previousTailPosition = segmentPositions[0];
+
         int gameRunning = 1; // -1 = Quit From Paused Menu, 0 = Game Over, 1 = Game Running
         int gameSpeed = 140;
-        bool paused = false;
-        int[] foodPos = new int[2] { 5, 5 };
-        int[] previousTailPosition = posList[0]; // Used to change the end of the tail when the snake dies.
+        bool gamePaused = false;
+        int[] foodPosition = new int[2] { 5, 5 };
 
         while (gameRunning == 1)
         {
             Thread.Sleep(gameSpeed);
-            InputHandler(ref gameRunning, ref paused, ref direction);
+            InputHandler(ref gameRunning, ref gamePaused, ref direction);
 
             // Clear the buffer to prevent the movement from "locking up."
             while (Console.KeyAvailable) Console.ReadKey(true);
 
-            if (!paused) // Game Loop
+            if (!gamePaused) // Game Loop
             {
 
                 // Direction Handler
@@ -259,32 +265,32 @@ class Program
                         break;
                 }
 
-                AppleSpawnerChecker(ref length, ref foodPos, ref gameRunning, headX, headY, posList);
+                AppleSpawnerChecker(ref snakeSegments, ref foodPosition, ref gameRunning, headX, headY, segmentPositions);
 
-                if (posList.Count > length)
+                if (segmentPositions.Count > snakeSegments)
                 {
-                    previousTailPosition = posList[0];
-                    posList.RemoveAt(0);
+                    previousTailPosition = segmentPositions[0];
+                    segmentPositions.RemoveAt(0);
                 }
 
                 // Collision Check w/ Walls
-                // Contine statements there to prevent the snake from clipping into the wall.
                 if (headX == 34 || headX == 0)
                     gameRunning = 0;
                 if (headY == 12 || headY == 0)
                     gameRunning = 0;
 
                 // Collision Check w/ Self
-                foreach (int[] pos in posList)
+                foreach (int[] pos in segmentPositions)
                     if (pos[0] == headX && pos[1] == headY)
                         gameRunning = 0;
 
                 if (gameRunning != 1) continue;
-                posList.Add(new int[2] { headX, headY });
-                DrawGame(posList, foodPos, length);
+                segmentPositions.Add(new int[2] { headX, headY });
+                DrawGame(segmentPositions, foodPosition, snakeSegments);
             }
             else // Pause Menu
             {
+                Console.Write($"\x1b[38;5;{MESSAGE_COLOR}m");
                 Console.SetCursorPosition(6, 5);
                 Console.WriteLine("Paused. Esc to unpause.");
                 Console.SetCursorPosition(7, 6);
@@ -296,26 +302,27 @@ class Program
         if (gameRunning == 0)
         {
             #region Dead Snake
-            foreach (int[] pos in posList)
+            foreach (int[] pos in segmentPositions)
             {
                 Console.SetCursorPosition(pos[0], pos[1]);
                 Console.Write("+");
             }
             Console.SetCursorPosition(previousTailPosition[0], previousTailPosition[1]);
             Console.Write("+");
-            Console.SetCursorPosition(posList[^1][0], posList[^1][1]);
+            Console.SetCursorPosition(segmentPositions[^1][0], segmentPositions[^1][1]);
             Console.Write("X");
             #endregion
 
             Thread.Sleep(1000);
             Console.SetCursorPosition(12, 5);
-            Console.WriteLine("Game Over!");
             // Just clear the buffer real quick to prevent the "Press any key." message from being skipped early.
             while (Console.KeyAvailable) Console.ReadKey(true);
+            Console.Write($"\x1b[38;5;{MESSAGE_COLOR}m");
+            Console.WriteLine("Game Over!");
             Console.SetCursorPosition(10, 6);
             Console.WriteLine("Press any key.");
             Console.ReadKey(true);
         }
-        return length - 1;
+        return snakeSegments - 1;
     }
 }
