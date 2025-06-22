@@ -184,21 +184,27 @@ class Program
         for (int y = 0; y < 11; y++)
         {
             display += "█";
+            bool lastPositionSnake = false;
             for (int x = 0; x < 33; x++)
             {
                 int[] currentPos = { x + 1, y + 1 };
                 if (segmentPositions.Any(p => p.SequenceEqual(currentPos)))
                 {
-                    display += $"\x1b[38;5;{SNAKE_COLOR}m";
+                    if (!lastPositionSnake)
+                    {
+                        lastPositionSnake = true;
+                        display += $"\x1b[38;5;{SNAKE_COLOR}m";
+                    }
                     // Draw head of snake.
                     if (segmentPositions[^1][0] == currentPos[0] && segmentPositions[^1][1] == currentPos[1])
-                        display += "@";
+                    display += "@";
                     // If not the head, draw the body.
                     else display += "#";
                 }
                 // Draw apple.
                 else if (foodPosition[0] == currentPos[0] && foodPosition[1] == currentPos[1])
                 {
+                    lastPositionSnake = false;
                     display += $"\x1b[38;5;{APPLE_COLOR}m";
                     display += "*";
                 }
