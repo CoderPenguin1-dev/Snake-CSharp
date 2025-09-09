@@ -244,7 +244,7 @@ class Program
         int[] previousTailPosition = segmentPositions[0];
 
         int gameRunning = 1; // -1 = Quit From Paused Menu, 0 = Game Over, 1 = Game Running
-        int gameSpeed = 140;
+        int gameSpeed = 120;
         bool gamePaused = false;
         int[] foodPosition = new int[2] { 5, 5 };
 
@@ -258,7 +258,6 @@ class Program
 
             if (!gamePaused) // Game Loop
             {
-
                 // Direction Handler
                 switch (direction)
                 {
